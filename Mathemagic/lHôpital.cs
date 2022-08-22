@@ -1,4 +1,6 @@
+using Mathemagic.Integers;
 using System;
+
 
 namespace Mathemagic;
 
@@ -6,6 +8,8 @@ namespace Mathemagic;
 public static class lHôpital {
 
   public static double Divide(Mathemagical f, Mathemagical g) {
+    // l'Hopital's rule in more than one dimension
+    // https://www.tandfonline.com/doi/full/10.1080/00029890.2020.1793635
     Console.WriteLine("lHôpital divide");
 
     var variables = f.Derivatives.Keys.Intersect(g.Derivatives.Keys).ToArray();
@@ -21,12 +25,10 @@ public static class lHôpital {
       int purePartialIndex = 1;
       var purePartial = g[variable];
       while (true) {
-        Console.WriteLine(string.Format("g{0}{1} {2}", variableIndex, purePartialIndex, purePartial.Value));
         if (purePartial.IsZero) {
           throw new Exception("g has no non-zero partial derivative in an index");
         }
         if (purePartial.Value != 0) {
-          Console.WriteLine(string.Format("g{0}{1} Non-zero {2}", variableIndex, purePartialIndex, purePartial.Value));
           firstNonZeroPartialOfG[variableIndex] = purePartialIndex;
           break;
         }
@@ -36,54 +38,34 @@ public static class lHôpital {
       variableIndex++;
     }
 
-    Console.WriteLine("[" + string.Join("][", firstNonZeroPartialOfG) + "]");
+    var simplex = new IntegerSimplex(firstNonZeroPartialOfG);
+    Console.WriteLine(simplex);
 
-    var someFpartial = f;
-    var someGpartial = g;
-    for (int somePartialIndex = 0; somePartialIndex < firstNonZeroPartialOfG[0]; somePartialIndex++) {
-      someFpartial = someFpartial[variables[0]];
-      someGpartial = someGpartial[variables[0]];
-      Console.WriteLine(string.Format("f {0} g {1}", someFpartial.Value, someGpartial.Value));
-    }
-    var lambda = someFpartial.Value/someGpartial.Value;
+    var lambdas = new List<double>();
 
-    var allNonZero = AllPartialsZero(g, 0, variables, firstNonZeroPartialOfG, true, true);
-    if (!allNonZero) {
-      throw new Exception("g has a non-zero mixed partial under the simplex");
-    }
-    
-    // tests about a simplicial polynomial, f partials equaling lambda partials everywhere
+    simplex.Iterate(
+      ValueTuple.Create(f,g),
+      (i, partials) => ValueTuple.Create(partials.Item1[variables[i]], partials.Item2[variables[i]]),
+      (partials, onSimplex) => {
+      if (onSimplex) {
+        if (partials.Item2.Value == 0) {
+          lambdas.Add(0);
+        } else {
+          var lambda = partials.Item1.Value/partials.Item2.Value;
+          lambdas.Add(lambda);
+        }
+      } else {
+        if (partials.Item2.Value != 0) {
+          throw new Exception("g has a non-zero mixed partial under the simplex");
+        }
+      }
+    });
 
-    return lambda;
+    lambdas.Sort();
+    Console.WriteLine("Lambda = [" + String.Join(", ", lambdas) + "]");
+
+    // tests about a simplicial polynomial, f partials equaling lambda partials everywhere (all lambdas being the same)
+    return lambdas[lambdas.Count/2];
   }
-
-  public static bool AllPartialsZero(Mathemagical partial, int index, Variable[] variables, int[] simplex, bool first, bool last) {
-    if (!(index < variables.Length)) {
-      if (first || last) {
-        return true;
-      }
-      if (partial.Value != 0) {
-        // Console.WriteLine(new String(' ', 3*index + 1) + "x");
-        return false;
-      }
-      return true;
-    }
-
-    var variable = variables[index];
-    
-    var indexedPartial = partial;
-    for (var i=0; i <= simplex[index]; i++) {
-      //Console.WriteLine(new String(' ', 3*index + 1) +  i.ToString());
-      var atFirst = first && i == 0;
-      var atLast = last && i == simplex[index];
-      if (!AllPartialsZero(indexedPartial, index+1, variables, simplex, atFirst, atLast)) {
-        return false;
-      }
-      indexedPartial = indexedPartial[variable];
-    }
-
-    return true;
-  }
-
   
 }

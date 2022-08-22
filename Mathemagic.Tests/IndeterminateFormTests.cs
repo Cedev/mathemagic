@@ -50,14 +50,14 @@ public class IndeterminateFormTests {
   }
 
   [Test]
-  [Ignore("Should probably fail based on a graph")]
+  [Ignore("TODO Requires comparing lambdas to see if the limit exists")]
   public void RSumCosTest() {
     var (ix, x) = Mathemagical.Variable(0);
     var (iy, y) = Mathemagical.Variable(0);
 
     var form = (x*x + y*y)/(x.Cos() - y.Cos());
 
-    Assert.That(form.Value, Is.EqualTo(7));
+    Assert.That(form.Value, Is.NaN);
 
   }
 
@@ -70,5 +70,33 @@ public class IndeterminateFormTests {
     var completelyFucked = x.Pow(5)*y/(x.Pow(6) + x*x*y*y + y.Pow(6));
     
     Assert.That(completelyFucked.Value, Is.Not.NaN);
+  }
+
+  [Test]
+  [Ignore("TODO requires propogating NaNs")]
+  public void DegenerateArcTest() {
+    var (ix, x) = Mathemagical.Variable(0);
+    var l = 10.0;
+    var t = 0.3;
+    var r = l/x.Sin();
+    TestContext.Out.WriteLine(r[ix].Value);
+    Assert.That(r[ix].Value, Is.Not.NaN);
+    TestContext.Out.WriteLine(r[ix][ix].Value);
+    TestContext.Out.WriteLine(r[ix][ix][ix].Value);
+
+    var xt = r*(t*x).Sin();
+
+    Assert.That(xt.Value, Is.EqualTo(t*l).Within(1).Ulps);
+  }
+
+  [Test]
+  public void DegenerateArcArtfulTest() {
+    var (ix, x) = Mathemagical.Variable(0);
+    var l = 10.0;
+    var t = 0.3;
+
+    var xt = l*(t*x).Sin()/x.Sin();
+
+    Assert.That(xt.Value, Is.EqualTo(t*l).Within(1).Ulps);
   }
 }
